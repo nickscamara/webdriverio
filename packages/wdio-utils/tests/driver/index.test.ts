@@ -70,6 +70,14 @@ vi.mock('../../src/driver/detectBackend.js', () => ({
     })
 }))
 
+vi.mock('../../src/driver/utils.js', async (actualMod) => ({
+    ...(await actualMod() as any),
+    setupPuppeteerBrowser: vi.fn().mockResolvedValue({
+        executablePath: '/path/to/browser',
+        browserVersion: '1.2.3'
+    })
+}))
+
 describe('startWebDriver', () => {
     const WDIO_SKIP_DRIVER_SETUP = process.env.WDIO_SKIP_DRIVER_SETUP
     beforeEach(() => {
@@ -123,6 +131,9 @@ describe('startWebDriver', () => {
             port: 1234,
             capabilities: {
                 browserName: 'firefox',
+                'moz:firefoxOptions': {
+                    binary: '/path/to/browser'
+                },
                 'wdio:geckodriverOptions': {
                     foo: 'bar'
                 },
@@ -190,41 +201,12 @@ describe('startWebDriver', () => {
                 },
             }
         })
-        expect(fsp.access).toBeCalledTimes(2)
-        expect(fsp.mkdir).toBeCalledTimes(1)
+        expect(fsp.access).toBeCalledTimes(1)
         expect(cp.spawn).toBeCalledTimes(1)
         expect(cp.spawn).toBeCalledWith(
             '/foo/bar/executable',
             ['--port=1234', '--foo=bar', '--allowed-origins=*', '--allowed-ips=']
         )
-    })
-
-    it('should find last known good version for chromedriver', async () => {
-        const options = {
-            capabilities: {
-                browserName: 'chrome',
-                browserVersion: '115.0.5790.171',
-                'wdio:chromedriverOptions': { foo: 'bar' }
-            } as any
-        }
-        vi.mocked(install)
-            .mockResolvedValueOnce({} as any)
-            .mockRejectedValueOnce(new Error('boom'))
-            .mockResolvedValue({} as any)
-        await startWebDriver(options)
-        expect(install).toBeCalledTimes(3)
-        expect(install).toBeCalledWith(expect.objectContaining({
-            buildId: '115.0.5790.171',
-            browser: 'chrome'
-        }))
-        expect(install).toBeCalledWith(expect.objectContaining({
-            buildId: '115.0.5790.171',
-            browser: 'chromedriver'
-        }))
-        expect(install).toBeCalledWith(expect.objectContaining({
-            buildId: '115.0.5790.170',
-            browser: 'chromedriver'
-        }))
     })
 
     it('should pipe logs into a file', async () => {
