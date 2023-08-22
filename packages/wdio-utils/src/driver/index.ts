@@ -16,7 +16,7 @@ import type { InstallOptions } from '@puppeteer/browsers'
 import type { Capabilities, Options } from '@wdio/types'
 
 import {
-    parseParams, setupChrome, definesRemoteDriver, setupChromedriver,
+    parseParams, setupPuppeteerBrowser, definesRemoteDriver, setupChromedriver,
     isChrome, isFirefox, isEdge, isSafari, getCacheDir
 } from './utils.js'
 import { SUPPORTED_BROWSERNAMES } from '../constants.js'
@@ -75,7 +75,7 @@ export async function startWebDriver (options: Options.WebDriver) {
          * Chrome
          */
         const chromedriverOptions = caps['wdio:chromedriverOptions'] || ({} as WebdriverIO.ChromedriverOptions)
-        const { executablePath: chromeExecuteablePath, browserVersion } = await setupChrome(cacheDir, caps)
+        const { executablePath: chromeExecuteablePath, browserVersion } = await setupPuppeteerBrowser(cacheDir, caps)
         const { executablePath: chromedriverExcecuteablePath } = await setupChromedriver(cacheDir, browserVersion)
 
         caps['goog:chromeOptions'] = deepmerge(
@@ -107,6 +107,12 @@ export async function startWebDriver (options: Options.WebDriver) {
         /**
          * Firefox
          */
+        const { executablePath } = await setupPuppeteerBrowser(cacheDir, caps)
+        caps['moz:firefoxOptions'] = deepmerge(
+            { binary: executablePath },
+            caps['moz:firefoxOptions'] || {}
+        )
+        delete caps.browserVersion
         const geckodriverOptions = caps['wdio:geckodriverOptions'] || ({} as GeckodriverParameters)
         driver = 'GeckoDriver'
         driverProcess = await startGeckodriver({ ...geckodriverOptions, cacheDir, port })
